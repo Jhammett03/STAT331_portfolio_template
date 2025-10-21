@@ -28,6 +28,9 @@ theme: slate
 
 ```{r}
 #| label: wd-1-csv-1
+# Lab 2: Question 1
+library(here)
+surveys <- read_csv(here::here("week_2", "labs", "surveys.csv"))
 
 ```
 
@@ -35,6 +38,9 @@ theme: slate
 
 ```{r}
 #| label: wd-1-csv-2
+# Lab 3: Question 2
+library(here)
+evals <- read_csv(here::here("week_3", "labs", "teacher_evals.csv"))
 
 ```
 
@@ -51,6 +57,25 @@ theme: slate
 
 ```{r}
 #| label: wd-2-ex-1
+# Lab 3: Question 5
+teacher_evals_clean <- evals |>
+  rename(sex = gender) |>
+  filter(no_participants >= 10) |>
+  mutate(
+    across(c(teacher_id, course_id, academic_degree, sex), as.factor),
+    seniority = as.integer(seniority)
+  ) |>
+  select(c(course_id,
+           teacher_id,
+           question_no,
+           no_participants,
+           resp_share,
+           SET_score_avg,
+           percent_failed_cur,
+           academic_degree,
+           seniority,
+           sex
+           ))
 
 ```
 
@@ -58,6 +83,11 @@ theme: slate
 
 ```{r}
 #| label: wd-2-ex-2
+#Lab 3: Question 8 (Modified)
+#Note: this is pretty gross and not a great way of selecting the proper columns but demonstrates negating columns and helps trim some of the fat from the output
+teacher_evals_clean |>
+  filter(if_any(.cols = everything(), .fns = ~ is.na(.x))) |>
+  select(course_id, teacher_id, everything(), -c(sex, question_no, seniority, no_participants, academic_degree ))
 
 ```
 
@@ -65,6 +95,11 @@ theme: slate
 
 ```{r}
 #| label: wd-2-ex-3
+#| label: uncovering-missing-values
+# Lab 3: Question 8 (Modified)
+teacher_evals_clean |>
+  filter(if_any(.cols = everything(), .fns = ~ is.na(.x))) |>
+  select(ends_with("id"), everything())
 
 ```
 
