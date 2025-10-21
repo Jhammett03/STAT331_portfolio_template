@@ -8,6 +8,12 @@ editor: visual
 execute: 
   eval: false
   echo: true
+code-tools: true
+code-fold: true
+toc: true
+toc-title: "Contents"
+toc-depth: 2
+theme: slate
 ---
 
 [**My Grade:**]{.underline} I believe my grade equivalent to course work evidenced below to be an \_\_.
