@@ -16,7 +16,7 @@ toc-depth: 2
 theme: slate
 ---
 
-[**My Grade:**]{.underline} I believe my grade equivalent to course work evidenced below to be an \_\_.
+[**My Grade:**]{.underline} I believe my grade equivalent to course work evidenced below to be an A-.
 
 [**Learning Objective Evidence:**]{.underline} In the code chunks below, provide code from Lab or Challenge assignments where you believe you have demonstrated proficiency with the specified learning target. Be sure to specify **where** the code came from (e.g., Lab 4 Question 2).
 
@@ -58,11 +58,14 @@ evals <- read_csv(here::here("week_3", "labs", "teacher_evals.csv"))
 ```{r}
 #| label: wd-2-ex-1
 # Lab 3: Question 5
+# feedback: Nice work! Your code does a great job filtering across multiple columns. However, the formatting of your code could use a bit of help. Specifically, I would love to see you using named argments and the correct function syntax for the across() function:
+# across(.cols = c(course_id, teacher_id), .fns = ~ as.factor(.x))
+
 teacher_evals_clean <- evals |>
   rename(sex = gender) |>
   filter(no_participants >= 10) |>
   mutate(
-    across(c(teacher_id, course_id, academic_degree, sex), as.factor),
+    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
     seniority = as.integer(seniority)
   ) |>
   select(c(course_id,
@@ -97,6 +100,8 @@ teacher_evals_clean |>
 #| label: wd-2-ex-3
 #| label: uncovering-missing-values
 # Lab 3: Question 8 (Modified)
+# feedback: Look at your counts! This seems like a lot more teachers than you found in Question 6! What do you need to do before calculating the summary statistics?
+
 teacher_evals_clean |>
   filter(if_any(.cols = everything(), .fns = ~ is.na(.x))) |>
   select(ends_with("id"), everything())
@@ -129,16 +134,17 @@ person |>
 ```{r}
 #| label: wd-3-numeric-ex-1
 # Lab 3: Question 10
+# feedback: You should only call the filter() function once!
 teacher_evals_clean |>
-  filter(question_no == 901) |>
   group_by(teacher_id) |>
   summarise(
     n_courses = n_distinct(course_id),
     avg_q1    = mean(SET_score_avg, na.rm = TRUE),
     .groups = "drop"
   ) |>
-  filter(n_courses >= 5) |>
-  filter(avg_q1 %in% c(max(avg_q1), min(avg_q1))) |>
+  filter(question_no == 901,
+         n_courses >= 5,
+         avg_q1 %in% c(max(avg_q1), min(avg_q1))) |>
   arrange(desc(avg_q1))
 
 
@@ -149,6 +155,9 @@ teacher_evals_clean |>
 ```{r}
 #| label: wd-3-character
 # Lab 3: Question 12
+# feedback: I would recommend using the %in% operator instead of the or!
+# Is there a way you can get the max *and* min in **one** pipeline? You are so close! You want to filter the max OR the min!
+
 teacher_evals_clean |>
   filter(academic_degree %in% c('dr', 'prof')) |>
   group_by(teacher_id) |>
@@ -227,7 +236,7 @@ teacher_evals_clean <- evals |>
   rename(sex = gender) |>
   filter(no_participants >= 10) |>
   mutate(
-    across(c(teacher_id, course_id, academic_degree, sex), as.factor),
+    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
     seniority = as.integer(seniority)
   ) |>
   select(c(course_id,
@@ -248,32 +257,35 @@ teacher_evals_clean <- evals |>
 ```{r}
 #| label: wd-4-factor-ex-1
 # Lab 4: Question 7
+# Nice work pivoting and modifying the age variable!
+#Can you reorder the facets so they go in the same order as mine?
+#Can you reorder the colors in the legend so they appear in the same order as the lines in the plot? I am specifically looking for a tool that does the reordering for you since doing the reordering by hand is not a robust programming practice!
+#Nice work changing the size of the x-axis text! Can you make this change to other aspects of the plot?
+
+library(viridis)
+
 ca_childcare |>
-  pivot_longer(
-    c(mc_infant, mc_toddler, mc_preschool),
-    names_to = "age_group",
-    values_to = "weekly_cost"
-  ) |>
-  mutate(age_group = recode(age_group,
-                            mc_infant="Infant", mc_toddler="Toddler", mc_preschool="Preschool")) |>
-  ggplot(aes(study_year, weekly_cost, color = census_region)) +
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
+      age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
+      census_region = fct_reorder2(census_region, study_year, weekly_cost)) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
   geom_point(alpha = 0.5, size = 0.8) +
-  geom_smooth(method = `loess`, formula = 'y ~ x') +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
   facet_grid(~ age_group) +
   scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500))+
-  labs(
-    title = "Weekly Median Price for Center-Based Childcare ($)",
-    y = NULL,
-    x = "Study Year",
-    color = "California Region"
-  ) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "magma") +
+  scale_fill_viridis_d(option = "magma") +
   theme_bw() +
-  theme(
-    aspect.ratio = 1,
-    axis.text.x = element_text(size = 6),
-    legend.key.size = unit(3.0, "mm")
-  )
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(4.0, "mm")) 
 ```
 
 -   Factor Example 2 (reordering levels)
@@ -361,10 +373,13 @@ person |>
 ```{r}
 #| label: wd-5-left-ex-1
 #Lab 4: Question 2
-ca_childcare <- left_join(x = childcare_costs,
-                          y = counties,
-                          by = join_by(county_fips_code)) |>
-filter(state_name == "California")
+# Technically, you don't need to use join_by() if both datasets have the same column names. You can simply use by = "county_fips_code".
+# I would highly recommend filtering first, so you are working with (joining) a smaller dataset.
+ca_childcare <- filter(state_name == "California") |>
+  left_join(x = childcare_costs,
+                  y = counties,
+                  by = "county_fips_code") |>
+
 ca_childcare
 ```
 
@@ -473,6 +488,9 @@ ca_childcare |>
 ```{r}
 #| label: wd-7-wide
 # Lab 4: Question 5
+# feedback: Nice work remembering to drop the groups! The second group would not have been dropped by default, so this is an important step to remember!
+#Can you give your column names better titles, so the reader knows what "2008" and "2018" represent? What are the values stored in these columns?
+
 ca_childcare |>
   filter(study_year %in% c(2008, 2018)) |>
   group_by(census_region, study_year) |>
@@ -482,8 +500,9 @@ ca_childcare |>
     names_from  = study_year,
     values_from = med_income_2018_dollars
   ) |>
-  rename(region = census_region) |>
-  arrange(desc(`2018`))
+  rename(region = census_region, med_household_income_2018 = `2018`,
+         med_household_income_2008 = `2008`) |>
+  arrange(desc(med_household_income_2018))
 
 ```
 
@@ -505,7 +524,7 @@ The following assignments satisfy the above criteria:
 
 ```{r}
 #| label: r-2-1
-# Lab 2: Question 
+# Lab 2: Question 16
 ggplot(data = surveys,
 mapping = aes(y = species, x = weight)) +
     geom_jitter(color = "steelblue", alpha = 0.3) +
@@ -718,6 +737,8 @@ ca_childcare |>
 
 -   I can modify my colors to be accessible to anyone's eyes
 
+    source: <https://cran.r-project.org/web/packages/viridis/vignettes/intro-to-viridis.html>
+
 ```{r}
 #| label: dvs-2-ex-2
 # Lab 4: Question 7 (Modified)
@@ -754,6 +775,20 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-2-ex-3
+# Lab 4: Question 8
+ca_childcare |>
+  ggplot(aes(x = mhi_2018,
+             y = mc_infant,
+             color = census_region)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", color = "black", formula = 'y ~ x') +
+  labs(
+    title = "Income vs. Infant Center-Based Childcare Cost (CA, 2008–2018)",
+    x = "Median Household Income (2018 dollars)",
+    y = "Median Weekly Price (Infant, Center-Based)",
+    color = "Region"
+  ) +
+  theme_bw() 
 
 ```
 
@@ -761,6 +796,32 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-2-ex-4
+# Lab 4: Question 7
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"
+    ),
+    age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
 
 ```
 
@@ -768,6 +829,32 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-2-ex-5
+# Lab 4: Question 7 (Modified)
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
+      age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
+      census_region = fct_reorder(census_region, weekly_cost, mean, .desc = TRUE)
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
 
 ```
 
@@ -777,6 +864,32 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-1-ex-1
+# Lab 4: Question 7
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"
+    ),
+    age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
 
 ```
 
@@ -784,6 +897,32 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-1-ex-2
+# Lab 4: Question 7 (Modified)
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"
+    ),
+    age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "magma") +
+  scale_fill_viridis_d(option = "magma") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
 
 ```
 
@@ -791,6 +930,26 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-2
+# Lab 4: Question 8 (Modified)
+# Note the geom_text here really isn't a great choice since there are so many points and we already have a legend, but this demonstrates I know how to use geom_text
+
+ca_childcare |>
+  ggplot(aes(x = mhi_2018,
+             y = mc_infant,
+             color = census_region)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", color = "black", formula = 'y ~ x') +
+  geom_text(aes(label = census_region),
+            size = 2,
+            vjust = -0.5,
+            check_overlap = TRUE) +
+  labs(
+    title = "Income vs. Infant Center-Based Childcare Cost (CA, 2008–2018)",
+    x = "Median Household Income (2018 dollars)",
+    y = "Median Weekly Price (Infant, Center-Based)",
+    color = "Region"
+  ) +
+  theme_bw() 
 
 ```
 
@@ -798,6 +957,28 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-3
+# Challenge 4 (Modified to use ribbon)
+gap <- yearly_summary |>
+  group_by(study_year) |>
+  summarise(
+    ymin = min(median_price, na.rm = TRUE),
+    ymax = max(median_price, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot() +
+  geom_ribbon(data = gap, aes(x = study_year, ymin = ymin, ymax = ymax),
+              fill = "grey80", alpha = 0.35) +
+  geom_line(data = yearly_summary, aes(x = study_year, y = median_price, color = setting), linewidth = 0.9) +
+  geom_point(data = yearly_summary, aes(x = study_year, y = median_price, color = setting), size = 1.8) +
+  scale_x_continuous(breaks = yearly_summary$study_year) +
+  labs(
+    title = "Median Weekly Infant Childcare Price by Setting (CA, 2008–2018)",
+    x = "Year",
+    y = "Median Weekly Price (USD)",
+    color = "Setting"
+  ) +
+  theme_bw()
 
 ```
 
@@ -807,13 +988,44 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-4-summarize
-
+# Lab 3: Question 12
+teacher_evals_clean |>
+  filter(academic_degree %in% c('dr', 'prof')) |>
+  group_by(teacher_id) |>
+  summarise(
+    avg_response = mean(resp_share),
+    seniority = first(seniority),
+    sex = first(sex),
+    .groups = "drop"
+  ) |>
+  filter(avg_response %in% c(max(avg_response), min(avg_response))) |>
+  select(teacher_id, avg_response, seniority, sex) |>
+  arrange(desc(avg_response))
 ```
 
 -   Example using `across()`
 
 ```{r}
 #| label: dvs-4-across
+# Lab 3: Question 5
+teacher_evals_clean <- evals |>
+  rename(sex = gender) |>
+  filter(no_participants >= 10) |>
+  mutate(
+    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
+    seniority = as.integer(seniority)
+  ) |>
+  select(c(course_id,
+           teacher_id,
+           question_no,
+           no_participants,
+           resp_share,
+           SET_score_avg,
+           percent_failed_cur,
+           academic_degree,
+           seniority,
+           sex
+           ))
 
 ```
 
@@ -823,6 +1035,12 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-5-1
+# Lab 3: Question 9
+teacher_evals_clean |>
+  group_by(course_id, teacher_id) |>
+  summarise(n_questions = n_distinct(question_no, na.rm = TRUE),
+            .groups = "drop") |>
+  summarise(all_9 = sum(n_questions == 9))
 
 ```
 
@@ -830,6 +1048,22 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-5-2
+# Lab 3: Question 7 (Modified)
+# feedback: Look at your counts! This seems like a lot more teachers than you found in Question 6! What do you need to do before calculating the summary statistics?
+instructors <- teacher_evals_clean |>
+  distinct(teacher_id, .keep_all = TRUE)
+
+
+instructors |>
+  group_by(academic_degree, sex) |>
+  summarise(
+    n_instructors = n(),
+    avg_seniority = mean(seniority),
+    min_seniority = min(seniority),
+    max_seniority = max(seniority),
+    .groups = "drop"
+  ) |>
+  arrange(desc(n_instructors))
 
 ```
 
@@ -839,7 +1073,23 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-6-ex-1
-
+#Lab 4: Question 4
+ca_childcare <- ca_childcare |> 
+  mutate(county_name = str_remove(county_name, " County"),
+         county_name = as_factor(county_name),
+         census_region = fct_collapse(
+           county_name,
+           "Superior California" = superior_counties,
+           "North Coast" = north_coast_counties,
+           "San Francisco Bay Area" = san_fran_counties,
+           "Northern San Joaquin Valley" = n_san_joaquin_counties,
+           "Central Coast" = central_coast_counties,
+           "Southern San Joaquin Valley" = s_san_joaquin_counties,
+           "Inland Empire" = inland_counties,
+           "Los Angeles County" = la_county,
+           "Orange County" = orange_county,
+           "San Diego - Imperial" = san_diego_imperial_counties )
+         )
 ```
 
 -   I can modify the text in my table to be more readable (e.g., bold face for column headers)
@@ -847,12 +1097,39 @@ ca_childcare |>
 ```{r}
 #| label: dvs-6-ex-2
 
+
 ```
 
 -   I can arrange my table to have an intuitive ordering
 
 ```{r}
 #| label: dvs-6-ex-3
+# Lab 4: Question 7 (Modified)
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
+      age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
+      census_region = fct_reorder(census_region, weekly_cost, mean, .desc = TRUE)
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "D") +
+  scale_fill_viridis_d(option = "D") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
 
 ```
 
@@ -880,13 +1157,49 @@ ca_childcare |>
 
 ```{r}
 #| label: pe-1-one-call
+# Lab 4: Question 5
+# calling filter once for years in 2008 and 2018 rather than two seperate filters
+# feedback: Nice work remembering to drop the groups! The second group would not have been dropped by default, so this is an important step to remember!
+#Can you give your column names better titles, so the reader knows what "2008" and "2018" represent? What are the values stored in these columns?
 
+ca_childcare |>
+  filter(study_year %in% c(2008, 2018)) |>
+  group_by(census_region, study_year) |>
+  summarise(med_income_2018_dollars = median(mhi_2018, na.rm = TRUE),
+            .groups = "drop") |>
+  pivot_wider(
+    names_from  = study_year,
+    values_from = med_income_2018_dollars
+  ) |>
+  rename(region = census_region, med_household_income_2018 = `2018`,
+         med_household_income_2008 = `2008`) |>
+  arrange(desc(med_household_income_2018))
 ```
 
 -   using `across()`
 
 ```{r}
 #| label: pe-1-across
+# Lab 3: Question 5
+# call as.factor across multiple columns 
+teacher_evals_clean <- evals |>
+  rename(sex = gender) |>
+  filter(no_participants >= 10) |>
+  mutate(
+    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
+    seniority = as.integer(seniority)
+  ) |>
+  select(c(course_id,
+           teacher_id,
+           question_no,
+           no_participants,
+           resp_share,
+           SET_score_avg,
+           percent_failed_cur,
+           academic_degree,
+           seniority,
+           sex
+           ))
 
 ```
 
@@ -926,6 +1239,25 @@ ca_childcare |>
 
 ```{r}
 #| label: pe-3-across
+# Lab 3: Question 5
+teacher_evals_clean <- evals |>
+  rename(sex = gender) |>
+  filter(no_participants >= 10) |>
+  mutate(
+    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
+    seniority = as.integer(seniority)
+  ) |>
+  select(c(course_id,
+           teacher_id,
+           question_no,
+           no_participants,
+           resp_share,
+           SET_score_avg,
+           percent_failed_cur,
+           academic_degree,
+           seniority,
+           sex
+           ))
 
 ```
 
@@ -949,6 +1281,25 @@ ca_childcare |>
 
 ```{r}
 #| label: pe-4-1
+# Challenge 3: Question 2
+# initially I used percent_format() which is now superseded by label_percent().
+
+ggplot(data = teacher_evals_compare, mapping = aes(x = sen_level, fill = SET_level)) +
+  geom_bar(position = "fill") +
+  labs(title = "Evaluation of Teachers' Use of Activities",
+       y = "",
+       x = "Years of Experience",
+       fill = "Evaluation Rating"
+       ) +
+  theme_bw() +
+  theme(
+    legend.position = "top"
+  ) + 
+   scale_fill_manual(
+    values = c("excellent" = "darkorchid1", "standard" = "darkgoldenrod")
+    # the colors don't really match was just trying to find the closest default color #code I could find online 
+  ) +
+  scale_y_continuous(labels = scales::label_percent())
 
 ```
 
@@ -956,6 +1307,33 @@ ca_childcare |>
 
 ```{r}
 #| label: pe-4-2
+# Lab 4: Question 6
+library(viridis)
+
+ca_childcare |>
+  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
+               names_to = "age_group", values_to = "weekly_cost") |>
+  mutate(
+    age_group = recode(age_group,
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
+      age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
+      census_region = fct_reorder(census_region, weekly_cost, mean, .desc = TRUE)
+  ) |>
+  ggplot(aes(study_year, weekly_cost,
+             color = census_region, fill = census_region)) +
+  geom_point(alpha = 0.5, size = 0.8) +
+  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
+  facet_grid(~ age_group) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
+       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+  scale_color_viridis_d(option = "magma") +
+  scale_fill_viridis_d(option = "magma") +
+  theme_bw() +
+  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
+        legend.key.size = unit(3.0, "mm"))
+
 
 ```
 
@@ -983,6 +1361,10 @@ ca_childcare |>
 
 ```{r}
 #| label: dsm-2-1
+# Lab 1: Question 11
+# feedback: Technically, you don't need the c() around the "two.sided" for the alternative =
+
+t.test(len ~ supp , data = ToothGrowth, alternative = "two.sided", var.equal = FALSE, conf.level = 0.95)
 
 ```
 
@@ -990,6 +1372,8 @@ ca_childcare |>
 
 ```{r}
 #| label: dsm-2-2
+# Lab 2: Question 17
+summary(aov(weight ~ species, data = surveys))
 
 ```
 
@@ -1004,14 +1388,24 @@ ca_childcare |>
 
 <!-- How did you revise your thinking throughout the course? How did you revise your thinking on the code examples you have provided in your portfolio? -->
 
+Throughout the course I have continually revised my thinking through assignment revisions as well as carrying the lessons learned from this feedback to later assignments. This is evident through many design and function choices in my code as well as using proper Quarto document structuring and YAML options. For specific examples of revised thinking in my code, refer to code with feedback in comments of this portfolio.
+
 <!-- For the revisions included in your Portfolio, to help me understand the nature of your revisions, please denote somehow the feedback I provided you (e.g., boldface, italics, colored text) before your revisions. -->
 
 ## Extending My Thinking
 
 <!-- How did you extended your thinking throughout the course? How did you extend your thinking on the code examples you have provided in your portfolio? -->
 
+I have used many resources to expand my thinking beyond the resources presented in class. This has mostly come from package documentation for learning how to best take advantage of a function and what other functions might work well with it. On occasion I have also asked generative AI clarifying questions and which libraries/ functions are good options to accomplish a particular task, though I have largely stayed away from AI because its easy to miss out on a lot of learning if used in excess. Noteable examples of this expanded thinking are my use of grep functions in Lab 5 which I was already familiar with in working with the Unix (POSIX) operating system in CS classes. Some other examples are learning how to use a geom ribbon (and what a geom ribbon is), as well as exploring different themes and color options (my favorite so far is viridis using "D", which looks a lot like a heatmap).
+
 ## Peer Support & Collaboration
 
 <!-- Include an image or a description of feedback you gave that you are proud of (either in a peer review or in Discord). -->
 
 <!-- Include a description of how you grew as a collaborator through the weekly pair programming activities.   -->
+
+Much of my learning this quarter has been cemented through collaborating with other students. The clearest example of this is through code reviews for Labs.
+
+One example is in Lab 2: "Hey Sebastien, great job on Lab 2. I really liked the theme you used for your quarto document! Overall your code and formatting look good, but one suggestion I have is that when you make a newline within a function call (because the parameters take up too much space) Its a good idea to also indent this line so its easier to tell visually that you are continuing the function call rather than chaining another +. One other thing I noticed was in your boxplot code you are rendering the boxplot before the jitter. Since there are so many points, most of the boxplots are getting covered. I would recommend swapping the order so the boxplot appears on top of the points so It is easier to look at. Good Job!".
+
+The other main way I grew is through our pair programming activities. I've grown to communicate my ideas more clearly and work with others more effectively. I have really enjoyed the pair programming assignments because I have been able to see how others solve problems and understand possibly better ways of doing things which has helped me improve my R skills as well.
