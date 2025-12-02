@@ -48,7 +48,8 @@ evals <- read_csv(here::here("week_3", "labs", "teacher_evals.csv"))
 
 ```{r}
 #| label: wd-1-xlsx
-
+# CheckIn 2.3
+ages_xlsx <- read_xlsx(here::here("week_2", "check-ins", "Ages_Data", "ages.xlsx"), sheet = "ages")
 ```
 
 **WD-2: I can select necessary columns from a dataset.**
@@ -450,6 +451,31 @@ get_fit_now_check_in |>
 
 ```{r}
 #| label: wd-6-semi
+# Lab 5
+# this question is pretty heavily modified. I originally just used left joins to join the drivers_license and facebook_event_checkin then filtered the entire joined table based on the clues. Now, I am pre-filtering each data set to select the relevant info from each table, then semi-joining them with person to only keep the relevant rows. I think the original version of this was slightly cleaner and doesn't save extra objects, but this works fine.
+# People whose license matches the description
+lic_candidates <- drivers_license |>
+  filter(
+    height >= 65, height <= 67,
+    hair_color == "red",
+    car_make == "Tesla",
+    car_model == "Model S"
+  )
+
+# People who checked into the SQL Symphony Concert 3 times in Dec 2017
+concert_3x <- facebook_event_checkin |>
+  mutate(date = ymd(date)) |>
+  filter(
+    event_name == "SQL Symphony Concert",
+    year(date) == 2017,
+    month(date) == 12
+  ) |>
+  count(person_id, name = "cnt") |>
+  filter(cnt == 3)
+
+person |>
+  semi_join(lic_candidates, by = join_by(license_id == id)) |>
+  semi_join(concert_3x, by = join_by(id == person_id)) 
 
 ```
 
@@ -457,6 +483,11 @@ get_fit_now_check_in |>
 
 ```{r}
 #| label: wd-6-anti
+# Lab 5
+# Modified to use an antijoin rather than a left join + filter. Originally I was filtering to see if Miranda had any interviews, now I'm doing an antijoin to return if the people named Miranda who do not have any interviews.
+person |>
+  filter(name == "Miranda Priestly") |>
+  anti_join(interview, by = join_by(id == person_id))
 
 ```
 
@@ -1141,7 +1172,7 @@ teacher_evals_summary <- teacher_evals_clean |>
                 percent_failed_cur, seniority),
       .fns = list(
         mean = ~ mean(.x, na.rm = TRUE),
-        sd   = ~ sd(.x, na.rm = TRUE)
+        sd = ~ sd(.x, na.rm = TRUE)
       ),
       .names = "{.col}_{.fn}"
     )
@@ -1223,6 +1254,7 @@ empty_fish |>
 ```{r}
 #| label: dvs-6-ex-2
 # Lab 9: Question 6
+# originally I used percent() which is superceded, so I switched it to label_percent()
 evals_kbl |>
   rename(
     Demographic = variable,
@@ -1231,7 +1263,7 @@ evals_kbl |>
     Percent = prop
   ) |>
   mutate(
-    Percent = percent(Percent, accuracy = 0.01)
+    Percent = label_percent(Percent, accuracy = 0.01)
   ) |>
   select(Demographic, Group, Count, Percent) |>
   kable(
@@ -1500,17 +1532,17 @@ surveys |>
 
 ```{r}
 #| label: pe-3-map-2
-# Lab 9: Question 2
-# I didnt have any examples of mapping over multiple things in my labs, This shows how you could turn the table values into an english sentence by mapping over both values. This isn't a super practical example but still cool.
-surveys |>
-  map_chr(.f = ~ class(.x)) |>
-  enframe(name = "Column", value = "Data Type") |>
-  mutate(Sentence = map2_chr(
-    .x = Column,
-    .y = `Data Type`,
-    .f = ~ paste(.x, "is of type", .y))) |>
-  kable()
-
+# Lab 9: Question 4
+teacher_evals_clean <- evals |>
+  mutate(
+    bind_cols(
+      map_if(
+        .x = pick(everything()),
+        .p = is.character,
+        .f = as.factor
+      )
+    )
+  )
 
 ```
 

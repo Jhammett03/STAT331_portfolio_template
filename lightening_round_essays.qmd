@@ -8,10 +8,20 @@ editor: visual
 
 1.  Finish the sentence with another student’s name: "If \[Name of Student\] doesn’t earn an A, then nobody should, because..." Explain your choice and your reasoning.
 
+    **Garrett Reinhard,** **He writes very clean code and has showed me alternate ways of solving problems that I likely would not have come up with myself.**
+
 2.  What was the most difficult part of the class for you? List a general topic, a specific problem, a kind of work we did, etc. and explain why.
+
+    **The most difficult part of this class for me was in making strong plots and tables. Most of the other concepts in this class were fairly easy for my CS brain to understand and apply, but the more creative and visual** **portion of this course was less familiar.**
 
 3.  What was the easiest part of the class for you? Explain why.
 
+    **I think the easiest part of this class for me was in the Dplyr joining and filtering of tables which was very similar to my experience working in SQL.**
+
 4.  What part of the class surprised or interested you the most? Explain why.
 
+    **The part of this course which surprised me the most was how practical R can be outside of just for dealing with statistics. I think R is a great choice for data management. In the past, I would generally use SQL for all of my querying, but dplyr pipelines can also be very powerful, and I find myself using it more often now.**
+
 5.  Give one piece of advice to a student just beginning a quarter of STAT 331 that will help them be successful in learning.
+
+    **Use the RStudio help pages with the ?function() in the console. It generally holds all the information you need about the functions, and can help you discover things you didn't know they could do.**
