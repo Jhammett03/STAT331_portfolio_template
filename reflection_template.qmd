@@ -327,23 +327,37 @@ ca_childcare |>
 
 ```{r}
 #| label: wd-4-string
-# Lab 4: Question 4
-ca_childcare <- ca_childcare |> 
-  mutate(county_name = str_remove(county_name, " County"),
-         county_name = as_factor(county_name),
-         census_region = fct_collapse(
-           county_name,
-           "Superior California" = superior_counties,
-           "North Coast" = north_coast_counties,
-           "San Francisco Bay Area" = san_fran_counties,
-           "Northern San Joaquin Valley" = n_san_joaquin_counties,
-           "Central Coast" = central_coast_counties,
-           "Southern San Joaquin Valley" = s_san_joaquin_counties,
-           "Inland Empire" = inland_counties,
-           "Los Angeles County" = la_county,
-           "Orange County" = orange_county,
-           "San Diego - Imperial" = san_diego_imperial_counties )
-         )
+# Lab 8: Question 3
+
+#helper function for formatting labels
+format_label <- function(var) {
+    label <- var |>
+      str_replace_all("_", " ") |>
+      str_to_lower() |>                 
+      str_to_title() |>
+      str_replace("Mm", "(mm)")
+    return(label)
+  }
+
+scatter_plot <- function(df, x, y) {
+
+  x_label <- format_label(as_label(enquo(x)))
+  y_label <- format_label(as_label(enquo(y)))
+
+  ggplot(df,
+         aes(x = {{ x }},
+             y = {{ y }},
+             color = {{ y }})) +
+    geom_point(alpha = 0.7, size = 2) +
+    guides(color = "none") +
+    labs(
+      title = str_c("Scatterplot of ", y_label, " vs ", x_label),
+      x = x_label,
+      y = y_label,
+      color = y_label,
+    ) +
+    theme(legend.position = "none")
+}
 ```
 
 -   Date (example must use functions from **lubridate**)
@@ -374,11 +388,10 @@ person |>
 #Lab 4: Question 2
 # Technically, you don't need to use join_by() if both datasets have the same column names. You can simply use by = "county_fips_code".
 # I would highly recommend filtering first, so you are working with (joining) a smaller dataset.
-ca_childcare <- filter(state_name == "California") |>
-  left_join(x = childcare_costs,
-                  y = counties,
-                  by = "county_fips_code") |>
-
+ca_childcare <- left_join(x = childcare_costs,
+                          y = counties,
+                          by = join_by(county_fips_code)) |>
+filter(state_name == "California")
 ca_childcare
 ```
 
@@ -400,10 +413,11 @@ person |>
 ```{r}
 #| label: wd-5-left-right-ex-2
 # Lab 5
+#modified to use str_detect rather than grepl
 get_fit_now_check_in |>
   left_join(get_fit_now_member, join_by(membership_id == id)) |>
   left_join(person, join_by(person_id == id, name == name)) |>
-  filter(grepl("Annabel", name))
+  filter(str_detect(name, "Annabel")
 ```
 
 -   `inner_join()` Example 1
@@ -426,7 +440,7 @@ person |>
 get_fit_now_check_in |>
   inner_join(get_fit_now_member, join_by(membership_id == id)) |>
   inner_join(person, join_by(person_id == id, name == name)) |>
-  filter(grepl("Annabel", name))
+  filter(str_detect("Annabel", name))
 
 ```
 
@@ -511,11 +525,17 @@ ca_childcare |>
 
 The following assignments satisfy the above criteria:
 
--   Example 1
--   Example 2
--   Example 3
--   Example 4
--   Example 5
+-   Example 1 Lab 1
+
+-   Example 2 Lab 2
+
+-   Example 3 Lab 3
+
+-   Example 4 Lab 4
+
+-   Example 5 Lab 8
+
+    All of these assignments use very similar Quarto headers for clean/ professional formatting and the here package to effectively import necessary files.
 
 **R-2: I can write well documented and tidy code.**
 
@@ -543,7 +563,9 @@ person |>
   left_join(facebook_event_checkin, by = join_by(id == person_id)) |>
   mutate(date = ymd(date)) |>
   filter(height >= 65, height <= 67, hair_color == 'red',
-         car_make == 'Tesla', car_model == 'Model S', event_name == "SQL Symphony Concert",
+         car_make == 'Tesla',
+         car_model == 'Model S',
+         event_name == "SQL Symphony Concert",
          year(date) == 2017, month(date) == '12') |>
   group_by(id, name) |>
   summarise(cnt = n(), .groups = 'drop' ) |>
@@ -555,6 +577,15 @@ person |>
 
 ```{r}
 #| label: r-2-3
+# Lab 8: Question 3
+format_label <- function(var) {
+    label <- var |>
+      str_replace_all("_", " ") |>
+      str_to_lower() |>                 
+      str_to_title() |>
+      str_replace("Mm", "(mm)")
+    return(label)
+}
 
 ```
 
@@ -564,6 +595,19 @@ person |>
 
 ```{r}
 #| label: r-3-example
+# Lab 5
+#explanation: this code helps us select the correct suspect from the data without actually knowing who they are but by their description. If the data changed and there was a different culprit matching their description, they would also appear in the result.
+person |>
+  left_join(drivers_license, by = join_by(license_id == id)) |>
+  left_join(facebook_event_checkin, by = join_by(id == person_id)) |>
+  mutate(date = ymd(date)) |>
+  filter(height >= 65, height <= 67, hair_color == 'red',
+         car_make == 'Tesla', car_model == 'Model S', event_name == "SQL Symphony Concert",
+         year(date) == 2017, month(date) == '12') |>
+  group_by(id, name) |>
+  summarise(cnt = n(), .groups = 'drop' ) |>
+  filter(cnt == 3) |>
+  pull(name)
 
 ```
 
@@ -571,6 +615,18 @@ person |>
 
 ```{r}
 #| label: r-3-function-stops
+# Lab 7: Question 1
+rescale_01 <- function(vec) {
+  if (!is.numeric(vec)) {
+    stop("Input must be numeric.")
+  }
+
+  if (length(vec) <= 1) {
+    stop("Input vector must have length greater than 1.")
+  }
+  rng <- range(vec, na.rm = TRUE)
+  (vec - rng[1]) / (rng[2] - rng[1])
+}
 
 ```
 
@@ -582,33 +638,41 @@ person |>
 
 ```{r}
 #| label: dvs-1-num
-# Lab 4: Question 7
- ca_childcare |>
-  pivot_longer(
-    c(mc_infant, mc_toddler, mc_preschool),
-    names_to = "age_group",
-    values_to = "weekly_cost"
-  ) |>
-  mutate(age_group = recode(age_group,
-                            mc_infant="Infant", mc_toddler="Toddler", mc_preschool="Preschool"),
-  age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")) |>
-  ggplot(aes(study_year, weekly_cost, color = census_region)) +
-  geom_point(alpha = 0.5, size = 0.8) +
-  geom_smooth(method = `loess`, formula = 'y ~ x') +
-  facet_grid(~ age_group) +
-  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500))+
+# Lab 10: Question 13
+# sample
+plot_ci <- ci_results |>
+  slice_sample(n = 100) |>
+  mutate(
+    sim = row_number(),
+    color = if_else(cover == 1, "covered", "missed")
+  )
+
+ggplot(plot_ci, aes(y = sim)) +
+  geom_segment(
+    aes(x = conf.low, xend = conf.high,
+        y = sim, yend = sim,
+        color = color),
+    linewidth = 0.4
+  ) +
+  geom_vline(xintercept = 0.5, linetype = "dashed") +
+  scale_color_manual(
+    values = c("covered" = "skyblue3",
+               "missed"  = "red3")
+  ) +
   labs(
-    title = "Weekly Median Price for Center-Based Childcare ($)",
+    title = "95% Confidence Intervals of Estimated Regression Slope<br>for 100 Simulated Datasets",
+    subtitle = "CI’s that <b>do not</b> include the population slope are highlighted in <span style='color:red;'>red</span>",
+    x = "Slope Coefficient Estimate",
     y = NULL,
-    x = "Study Year",
-    color = "California Region"
+    color = NULL
   ) +
   theme_bw() +
   theme(
-    aspect.ratio = 1,
-    axis.text.x = element_text(size = 6),
-    legend.key.size = unit(3.0, "mm")
+    legend.position = "none",
+    plot.title = element_markdown(size = 16),
+    plot.subtitle = element_markdown(size = 12),
+    panel.grid.major.y = element_blank(),
+    panel.grid.minor = element_blank()
   )
 
 ```
@@ -631,34 +695,42 @@ mapping = aes(y = species, x = weight)) +
 
 ```{r}
 #| label: dvs-2-cat
-# Lab 4: Question 7
-ca_childcare |>
-  pivot_longer(
-    c(mc_infant, mc_toddler, mc_preschool),
-    names_to = "age_group",
-    values_to = "weekly_cost"
-  ) |>
-  mutate(age_group = recode(age_group,
-                            mc_infant="Infant", mc_toddler="Toddler", mc_preschool="Preschool"),
-  age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")) |>
-  ggplot(aes(study_year, weekly_cost, color = census_region)) +
-  geom_point(alpha = 0.5, size = 0.8) +
-  geom_smooth(method = `loess`, formula = 'y ~ x') +
-  facet_grid(~ age_group) +
-  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500))+
-  labs(
-    title = "Weekly Median Price for Center-Based Childcare ($)",
-    y = NULL,
-    x = "Study Year",
-    color = "California Region"
-  ) +
-  theme_bw() +
-  theme(
-    aspect.ratio = 1,
-    axis.text.x = element_text(size = 6),
-    legend.key.size = unit(3.0, "mm")
-  )
+# Lab 8: Question 4
+# my solution tried to build the proper function names based on the arguments
+style_plot <- function(
+  plot,
+  theme_fn = theme_minimal(),
+  palette  = RColorBrewer::brewer.pal(9, "YlGnBu"),
+  aesthetic = "color",
+  scale_type = "continuous"
+  # pick the scale type ("continuous" or "discrete")
+) {
+
+  # Build correct scale function name
+  scale_fn_name <- if (scale_type == "continuous") {
+    str_c("scale_", aesthetic, "_gradientn")   #use gradientn for continuous scales
+  } else {
+    str_c("scale_", aesthetic, "_manual")      #use manual for discrete
+  }
+  # execute proper function with correct param names
+  scale_layer <- if (scale_type == "continuous") {
+    exec(as.symbol(scale_fn_name), colors = palette)
+  } else {
+    exec(as.symbol(scale_fn_name), values  = palette)
+  }
+
+  plot + 
+    scale_layer + 
+    theme_fn
+}
+my_plot <- ggplot(penguins, mapping = aes(x = species, fill = sex)) + 
+  geom_bar()
+
+style_plot(my_plot, 
+           theme_fn = theme_bw(), 
+           palette = brewer.pal(3, "Paired"), 
+           aesthetic = "fill",
+           scale_type = "discrete")
 
 ```
 
@@ -775,12 +847,19 @@ ca_childcare |>
 ```{r}
 #| label: dvs-2-ex-3
 # Lab 4: Question 8
+#modified to add $ on axis values
 ca_childcare |>
   ggplot(aes(x = mhi_2018,
              y = mc_infant,
              color = census_region)) +
   geom_point(alpha = 0.7) +
   geom_smooth(method = "lm", color = "black", formula = 'y ~ x') +
+  geom_text(aes(label = census_region),
+            size = 2,
+            vjust = -0.5,
+            check_overlap = TRUE) +
+  scale_y_continuous(labels = label_dollar()) +
+  scale_x_continuous(labels = label_dollar()) +
   labs(
     title = "Income vs. Infant Center-Based Childcare Cost (CA, 2008–2018)",
     x = "Median Household Income (2018 dollars)",
@@ -803,24 +882,26 @@ ca_childcare |>
                names_to = "age_group", values_to = "weekly_cost") |>
   mutate(
     age_group = recode(age_group,
-      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"
-    ),
-    age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")
-  ) |>
+      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
+      age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
+      census_region = fct_reorder2(census_region, study_year, weekly_cost)) |>
   ggplot(aes(study_year, weekly_cost,
              color = census_region, fill = census_region)) +
   geom_point(alpha = 0.5, size = 0.8) +
   geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
   facet_grid(~ age_group) +
-  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2),
+                     limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100),
+                     limits = c(100, 500),
+                     labels = label_dollar()) +
   labs(title = "Weekly Median Price for Center-Based Childcare ($)",
        y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
-  scale_color_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
+  scale_color_viridis_d(option = "magma") +
+  scale_fill_viridis_d(option = "magma") +
   theme_bw() +
   theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
-        legend.key.size = unit(3.0, "mm"))
+        legend.key.size = unit(4.0, "mm")) 
 
 ```
 
@@ -838,22 +919,24 @@ ca_childcare |>
     age_group = recode(age_group,
       mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"),
       age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool"),
-      census_region = fct_reorder(census_region, weekly_cost, mean, .desc = TRUE)
-  ) |>
+      census_region = fct_reorder2(census_region, study_year, weekly_cost)) |>
   ggplot(aes(study_year, weekly_cost,
              color = census_region, fill = census_region)) +
   geom_point(alpha = 0.5, size = 0.8) +
   geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
   facet_grid(~ age_group) +
-  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
+  scale_x_continuous(breaks = seq(2008, 2018, 2),
+                     limits = c(2008, 2018)) +
+  scale_y_continuous(breaks = seq(100, 500, 100),
+                     limits = c(100, 500),
+                     labels = label_dollar()) +
   labs(title = "Weekly Median Price for Center-Based Childcare ($)",
        y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
-  scale_color_viridis_d(option = "D") +
-  scale_fill_viridis_d(option = "D") +
+  scale_color_viridis_d(option = "magma") +
+  scale_fill_viridis_d(option = "magma") +
   theme_bw() +
   theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
-        legend.key.size = unit(3.0, "mm"))
+        legend.key.size = unit(4.0, "mm")) 
 
 ```
 
@@ -896,32 +979,61 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-1-ex-2
-# Lab 4: Question 7 (Modified)
-library(viridis)
+# Challenge 7: Question 5
 
-ca_childcare |>
-  pivot_longer(c(mc_infant, mc_toddler, mc_preschool),
-               names_to = "age_group", values_to = "weekly_cost") |>
-  mutate(
-    age_group = recode(age_group,
-      mc_infant = "Infant", mc_toddler = "Toddler", mc_preschool = "Preschool"
-    ),
-    age_group = fct_relevel(age_group, "Infant", "Toddler", "Preschool")
-  ) |>
-  ggplot(aes(study_year, weekly_cost,
-             color = census_region, fill = census_region)) +
-  geom_point(alpha = 0.5, size = 0.8) +
-  geom_smooth(method = "loess", formula = y ~ x, se = TRUE) +
-  facet_grid(~ age_group) +
-  scale_x_continuous(breaks = seq(2008, 2018, 2), limits = c(2008, 2018)) +
-  scale_y_continuous(breaks = seq(100, 500, 100), limits = c(100, 500)) +
-  labs(title = "Weekly Median Price for Center-Based Childcare ($)",
-       y = NULL, x = "Study Year", color = "California Region", fill = "California Region") +
+cond_df <- cleaned_fish |>
+  mutate(cond_idx = condition_index(weight, length))
+
+cond_summary <- cond_df |>
+  group_by(year, section, species) |>
+  summarise(cond_idx_median = median(cond_idx, na.rm = TRUE), .groups = "drop")
+
+ggplot(cond_summary,
+       aes(x = factor(year), y = cond_idx_median, color = species, group = species)) +
+  geom_line(linewidth = 0.9) +
+  geom_point(size = 2) +
+  facet_wrap(~ section) +
   scale_color_viridis_d(option = "magma") +
-  scale_fill_viridis_d(option = "magma") +
+  labs(
+    title = "Fish Condition Over Time by River Section and Species",
+    x = "Year",
+    y = "Median Condition Index",
+    color = "Species"
+  ) +
   theme_bw() +
-  theme(aspect.ratio = 1, axis.text.x = element_text(size = 6),
-        legend.key.size = unit(3.0, "mm"))
+  theme(
+    axis.text.x = element_text(size = 8),
+    panel.grid.minor = element_blank()
+  )
+
+#I was trying to use a more distinct plot type, I thought the bubble plot was cool,
+# but not entirely easy to read so I decided to make a line plot too
+cond_bubble <- cond_df |>
+  group_by(year, species, section) |>
+  summarise(
+    cond_idx_median = median(cond_idx, na.rm = TRUE),
+    n = n(),
+    .groups = "drop"
+  )
+
+ggplot(cond_bubble,
+       aes(x = factor(year), y = cond_idx_median, color = species, size = n)) +
+  geom_point(alpha = 0.8) +
+  facet_wrap(~ section) +
+  scale_color_viridis_d(option = "magma") +
+  scale_size_continuous(range = c(2, 8)) +
+  labs(
+    title = "Fish Condition and Sampling Intensity by Year and Section",
+    x = "Year",
+    y = "Median Condition Index",
+    color = "Species",
+    size = "Sample size"
+  ) +
+  theme_minimal(base_size = 12) +
+  theme(
+    axis.text.x = element_text(size = 7),
+    panel.grid.minor = element_blank()
+  )
 
 ```
 
@@ -929,26 +1041,21 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-3-2
-# Lab 4: Question 8 (Modified)
-# Note the geom_text here really isn't a great choice since there are so many points and we already have a legend, but this demonstrates I know how to use geom_text
-
-ca_childcare |>
-  ggplot(aes(x = mhi_2018,
-             y = mc_infant,
-             color = census_region)) +
-  geom_point(alpha = 0.7) +
-  geom_smooth(method = "lm", color = "black", formula = 'y ~ x') +
-  geom_text(aes(label = census_region),
-            size = 2,
-            vjust = -0.5,
-            check_overlap = TRUE) +
-  labs(
-    title = "Income vs. Infant Center-Based Childcare Cost (CA, 2008–2018)",
-    x = "Median Household Income (2018 dollars)",
-    y = "Median Weekly Price (Infant, Center-Based)",
-    color = "Region"
-  ) +
-  theme_bw() 
+(scatter_plot(penguins, bill_length_mm, bill_depth_mm) +
+    geom_text(
+      aes(label = str_glue("({bill_length_mm}, {bill_depth_mm})")),
+      size = 2.5,
+      vjust = -0.8,
+      check_overlap = TRUE,
+      color = "black"
+    )
+) |>
+  style_plot(
+    theme_fn  = theme_bw(),
+    palette   = viridisLite::viridis(256),
+    aesthetic = "color",
+    scale_type = "continuous"
+  )
 
 ```
 
@@ -1025,6 +1132,22 @@ teacher_evals_clean <- evals |>
            seniority,
            sex
            ))
+# modification for making summary columns like mean and sd for different columns in teacher_evals_clean
+teacher_evals_summary <- teacher_evals_clean |>
+  summarise(
+    n = n(),
+    across(
+      .cols = c(no_participants, resp_share, SET_score_avg,
+                percent_failed_cur, seniority),
+      .fns = list(
+        mean = ~ mean(.x, na.rm = TRUE),
+        sd   = ~ sd(.x, na.rm = TRUE)
+      ),
+      .names = "{.col}_{.fn}"
+    )
+  )
+
+teacher_evals_summary
 
 ```
 
@@ -1072,30 +1195,56 @@ instructors |>
 
 ```{r}
 #| label: dvs-6-ex-1
-#Lab 4: Question 4
-ca_childcare <- ca_childcare |> 
-  mutate(county_name = str_remove(county_name, " County"),
-         county_name = as_factor(county_name),
-         census_region = fct_collapse(
-           county_name,
-           "Superior California" = superior_counties,
-           "North Coast" = north_coast_counties,
-           "San Francisco Bay Area" = san_fran_counties,
-           "Northern San Joaquin Valley" = n_san_joaquin_counties,
-           "Central Coast" = central_coast_counties,
-           "Southern San Joaquin Valley" = s_san_joaquin_counties,
-           "Inland Empire" = inland_counties,
-           "Los Angeles County" = la_county,
-           "Orange County" = orange_county,
-           "San Diego - Imperial" = san_diego_imperial_counties )
-         )
+# Lab 9: Question 8
+empty_fish |>
+  arrange(n_missing)|>
+  rename(
+    "Measurement Variable" = variable,
+    "Missing Values" = n_missing
+  )|>
+  gt()|>
+  data_color(method = "numeric",
+             palette = c("#1c9e77", "#d95d04"))|>
+  tab_header(
+    title = "Number of Missing Values for Fish Measurements",
+    subtitle = "Data Collected from 1989 to 2006 on the Blackfoot Fish River in Montana"
+  )|>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels(
+      columns = everything()
+    )
+  )
+
 ```
 
 -   I can modify the text in my table to be more readable (e.g., bold face for column headers)
 
 ```{r}
 #| label: dvs-6-ex-2
-
+# Lab 9: Question 6
+evals_kbl |>
+  rename(
+    Demographic = variable,
+    Group = level,
+    Count = n,
+    Percent = prop
+  ) |>
+  mutate(
+    Percent = percent(Percent, accuracy = 0.01)
+  ) |>
+  select(Demographic, Group, Count, Percent) |>
+  kable(
+    col.names = c("Demographic", "Group", "Count", "%"),
+    align = c("l", "l", "r", "r"),
+    caption = "Instructor Demographics"
+  ) |>
+  collapse_rows(columns = 1, valign = "top") |>
+  add_header_above(c(" " = 2, "Professor" = 2)) |>
+  kable_styling(
+    full_width = FALSE,
+    bootstrap_options = "striped"
+  )
 
 ```
 
@@ -1138,6 +1287,15 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-7-ex-1
+# Lab 9: Question 3
+surveys |>
+  map_chr(.f = ~ class(.x)) |>
+  enframe() |>
+  arrange(value) |>
+  kable(col.names = c("Column","Data Type"),
+        caption = "Data Types of Columns in the surveys table") |>
+  row_spec(0, bold = TRUE) |>
+  kable_material_dark()
 
 ```
 
@@ -1145,6 +1303,42 @@ ca_childcare |>
 
 ```{r}
 #| label: dvs-7-ex-2
+# Lab 9: Question 5
+evals_kbl <- teacher_evals_clean |>
+  distinct(teacher_id, .keep_all = TRUE) |>
+  mutate (
+    sen_level = case_when (
+      seniority <= 4 ~ "Junior",
+      seniority <= 8 ~ "Senior",
+      seniority > 8 ~ "Very Senior"
+    ),
+    academic_degree = recode(academic_degree,
+                             "no_dgr" = "No Degree",
+                             "ma" = "Masters",
+                             "dr" = "Doctorate",
+                             "prof" = "Professor"),
+    sex = recode(sex, 
+                 "male" = "Male",
+                 "female" = "Female"),
+  )|>
+    select(teacher_id, academic_degree, sen_level, sex) |>
+  pivot_longer(
+    cols = c(academic_degree, sen_level, sex),
+    names_to = "variable",
+    values_to = "level"
+  )|>
+  count(variable, level, name = "n") |>
+  group_by(variable) |>
+  mutate(prop = n / sum(n),
+         variable = recode(variable,
+                           "academic_degree" = "Academic Degree",
+                           "sen_level" = "Seniority",
+                           "sex" = "Sex")) |>
+  ungroup()
+  evals_kbl|>
+  kable()|>
+  kable_styling(full_width = FALSE,
+                bootstrap_options = "striped")
 
 ```
 
@@ -1206,7 +1400,11 @@ teacher_evals_clean <- evals |>
 
 ```{r}
 #| label: pe-1-map-1
-
+# Lab 9: Question 1
+surveys |>
+  map_chr(.f = ~ class(.x)) |>
+  enframe(name = "Column", value = "Data Type") |>
+  kable()
 ```
 
 **PE-2: I can write functions to reduce repetition in my code.**
@@ -1215,20 +1413,59 @@ teacher_evals_clean <- evals |>
 
 ```{r}
 #| label: pe-2-1
-
+# Challenge 7: Question 2
+validate_range <- function(measurements, min, max) {
+  measurements[measurements < min | measurements > max] <- NA
+  return(measurements)
+}
 ```
 
 -   Example 2: Function that operates on data frames
 
 ```{r}
 #| label: pe-2-2
-
+# Lab 8: Question 1
+rescale_column <- function(df, cols) {
+  df |>
+    mutate(
+      across(.cols = {{ cols }},
+             .fns = rescale_01
+             )
+    )
+}
 ```
 
 -   Example 3: Function that operates on vectors *or* data frames
 
 ```{r}
 #| label: pe-2-3
+# Lab 8: Question 4
+style_plot <- function(
+  plot,
+  theme_fn = theme_minimal(),
+  palette  = RColorBrewer::brewer.pal(9, "YlGnBu"),
+  aesthetic = "color",
+  scale_type = "continuous"
+  # pick the scale type ("continuous" or "discrete")
+) {
+
+  # Build correct scale function name
+  scale_fn_name <- if (scale_type == "continuous") {
+    str_c("scale_", aesthetic, "_gradientn")   #use gradientn for continuous scales
+  } else {
+    str_c("scale_", aesthetic, "_manual")      #use manual for discrete
+  }
+  # execute proper function with correct param names
+  scale_layer <- if (scale_type == "continuous") {
+    exec(as.symbol(scale_fn_name), colors = palette)
+  } else {
+    exec(as.symbol(scale_fn_name), values  = palette)
+  }
+
+  plot + 
+    scale_layer + 
+    theme_fn
+}
 
 ```
 
@@ -1238,25 +1475,12 @@ teacher_evals_clean <- evals |>
 
 ```{r}
 #| label: pe-3-across
-# Lab 3: Question 5
-teacher_evals_clean <- evals |>
-  rename(sex = gender) |>
-  filter(no_participants >= 10) |>
-  mutate(
-    across(.cols = c(teacher_id, course_id, academic_degree, sex), .fns = ~ as.factor),
-    seniority = as.integer(seniority)
-  ) |>
-  select(c(course_id,
-           teacher_id,
-           question_no,
-           no_participants,
-           resp_share,
-           SET_score_avg,
-           percent_failed_cur,
-           academic_degree,
-           seniority,
-           sex
-           ))
+# Lab 7: Question 1
+fish |> 
+  summarise(across(everything(), ~ sum(is.na(.)))) |> 
+  mutate(total_obs_with_missing = fish |>
+    filter(if_any(everything(), is.na)) |>
+    nrow())
 
 ```
 
@@ -1264,6 +1488,11 @@ teacher_evals_clean <- evals |>
 
 ```{r}
 #| label: pe-3-map-1
+# Lab 9: Question 2
+surveys |>
+  map_chr(.f = ~ class(.x)) |>
+  enframe(name = "Column", value = "Data Type") |>
+  kable()
 
 ```
 
@@ -1271,6 +1500,17 @@ teacher_evals_clean <- evals |>
 
 ```{r}
 #| label: pe-3-map-2
+# Lab 9: Question 2
+# I didnt have any examples of mapping over multiple things in my labs, This shows how you could turn the table values into an english sentence by mapping over both values. This isn't a super practical example but still cool.
+surveys |>
+  map_chr(.f = ~ class(.x)) |>
+  enframe(name = "Column", value = "Data Type") |>
+  mutate(Sentence = map2_chr(
+    .x = Column,
+    .y = `Data Type`,
+    .f = ~ paste(.x, "is of type", .y))) |>
+  kable()
+
 
 ```
 
@@ -1344,6 +1584,15 @@ ca_childcare |>
 
 ```{r}
 #| label: dsm-1-1
+# Lab 10: Question 1
+set.seed(14)
+
+randomBabies <- function(n_babies){
+  returned <- sample(1:n_babies,
+                     n_babies,
+                     replace = FALSE)
+  sum(returned == 1:n_babies)
+}
 
 ```
 
@@ -1351,7 +1600,21 @@ ca_childcare |>
 
 ```{r}
 #| label: dsm-1-2
-
+#Lab 10: Question 8
+mycifun <- function(beta0, beta1, n) {
+  x  <- runif(n, min = 0, max = 1)
+  ep <- rnorm(n, mean = 0, sd = 1)
+  y  <- beta0 + beta1 * x + ep
+  model <- lm(y ~ x)
+  tidy(model, conf.int = TRUE) |>
+    filter(term == "x") |>
+    mutate(
+      slope_est = estimate, 
+      cover = if_else(
+        conf.low <= beta1 & conf.high >= beta1, 1L, 0L)
+    ) |>
+    select(slope_est, conf.low, conf.high, cover)
+}
 ```
 
 **DSSM-2: I can conduct common statistical analyses in R.**
@@ -1380,6 +1643,8 @@ summary(aov(weight ~ species, data = surveys))
 
 ```{r}
 #| label: dsm-2-3
+# Lab 10: Question 5
+regression <- lm(y ~ x, data = obs_data)
 
 ```
 
