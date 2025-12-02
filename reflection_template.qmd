@@ -1125,19 +1125,21 @@ ggplot() +
 
 ```{r}
 #| label: dvs-4-summarize
-# Lab 3: Question 12
-teacher_evals_clean |>
-  filter(academic_degree %in% c('dr', 'prof')) |>
-  group_by(teacher_id) |>
+# Lab 3: Question 7
+instructors <- teacher_evals_clean |>
+  distinct(teacher_id, .keep_all = TRUE)
+
+
+instructors |>
+  group_by(academic_degree, sex) |>
   summarise(
-    avg_response = mean(resp_share),
-    seniority = first(seniority),
-    sex = first(sex),
+    n_instructors = n(),
+    avg_seniority = mean(seniority),
+    min_seniority = min(seniority),
+    max_seniority = max(seniority),
     .groups = "drop"
   ) |>
-  filter(avg_response %in% c(max(avg_response), min(avg_response))) |>
-  select(teacher_id, avg_response, seniority, sex) |>
-  arrange(desc(avg_response))
+  arrange(desc(n_instructors))
 ```
 
 -   Example using `across()`
